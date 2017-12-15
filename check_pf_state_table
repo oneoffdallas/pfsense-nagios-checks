@@ -1,0 +1,33 @@
+#!/bin/sh
+
+if [ "$1" = "-w" ] && [ "$2" -gt "0" ] && [ "$3" = "-c" ] && [ "$4" -gt "0" ] ; then
+        WARN=$2
+        CRIT=$4
+STATES=`pfctl -si | grep "current entries" | awk '{ print $3 }'`
+LIMIT=`pfctl -sm | grep states | awk '{ print $4 }'`
+#PERC=`echo "$((($STATES*100)/$LIMIT))"|bc`
+PERC=`expr $STATES \* 100 / $LIMIT`
+
+#echo $PERC
+#echo $PERC2
+
+if [ $PERC -lt $WARN ]; then
+        MSG="OK"
+        STATUS="0"
+elif [ $PERC -ge $CRIT ]; then
+        MSG="CRITICAL"
+        STATUS="2"
+elif [ $PERC -ge $WARN ]; then
+        MSG="WARNING"
+        STATUS="1"
+fi
+echo "$MSG - PF state table: $STATES ( $PERC% full - limit: $LIMIT) | current_states=$STATES;state_limit=$LIMIT;percent_used=$PERC"
+exit $STATUS
+
+else
+        echo "check_pf_state_table.sh - Nagios Plugin for checking state table"
+        echo ""
+        echo "Usage:    check_pf_state_table.sh -w <warnlevel> -c <critlevel>"
+        exit 3
+fi
+

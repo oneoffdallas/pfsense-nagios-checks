@@ -1,0 +1,78 @@
+#!/usr/local/bin/php -f
+<?
+
+# This check used to pull the version from the website and compare them, 
+# but some variables changed recently and I haven't circled back to this. 
+# Thus, a majority of that code has been commented out. 
+#
+
+require("globals.inc");
+require("config.inc");
+require("functions.inc");
+
+$current_installed_buildtime = trim(file_get_contents("/etc/version.buildtime"));
+$current_installed_version = trim(file_get_contents("/etc/version"));
+# originally going to use same version file as web interface in tmp, but permission issues arose
+$remote_version = trim(@file_get_contents("/home/nagios/{$g['product_name']}_version"));
+$static_text = "";
+
+if(isset($config['system']['firmware']['alturl']['enable']))
+        $updater_url = "{$config['system']['firmware']['alturl']['firmwareurl']}";
+else
+        $updater_url = $g['update_url'];
+
+$nanosize = "";
+if ($g['platform'] == "nanobsd") {
+        if (file_exists("/etc/nano_use_vga.txt"))
+                $nanosize = "-nanobsd-vga-";
+        else
+                $nanosize = "-nanobsd-";
+
+        $nanosize .= strtolower(trim(file_get_contents("/etc/nanosize.txt")));
+        $update_filename = "latest{$nanosize}.img.gz";
+} else {
+        $update_filename = "latest.tgz";
+}
+
+$autoupdateurl = "{$updater_url}/{$update_filename}";
+
+$tmp_filename = "/home/nagios/{$g['product_name']}_version";
+// check if file exists and see if it is over 6 (60*60*6) hours old, if it is grab a new one
+// do not drop your check under 6 hours as it will cause unnecessary calls to pfSense servers
+if ( (!file_exists($tmp_filename)) || ((time()-filemtime($tmp_filename))> 60*60*6) || (count(file($tmp_filename))>2) ) {
+        //echo "need new remote file\n";
+
+if(download_file_with_progress_bar("{$updater_url}/version{$nanosize}", "/home/nagios/{$g['product_name']}_version", 'read_body', 5, 5) === true)
+        { sleep (5); $remote_version = trim(@file_get_contents("/home/nagios/{$g['product_name']}_version")); }
+
+if ( (count(file($tmp_filename))>2) ) {
+        $static_text = gettext("UNKNOWN - unable to check for updates.") . "\n";
+        $exitcode = 3;
+        $remote_version = "Error";
+        if(isset($curcfg['alturl']['enable']))
+                $static_text .= gettext("Could not contact custom update server.") . "\n";
+        else
+                $static_text .= sprintf(gettext('Could not contact %1$s update server %2$s%3$s'), $g['product_name'], $updater_url, "\n");
+}
+
+}
+
+if ($static_text !== "")
+{ $additional_info = $static_text;  }
+/*
+elseif ( pfs_version_compare($current_installed_buildtime, $current_installed_version, $remote_version) == -1)
+{ $additional_info = "WARNING - new version available\n" ;  $exitcode = 1; }
+else
+{ $additional_info = "OK - already at latest version\n" ; $exitcode = 0; }
+*/
+$additional_info .= "Current version: ".$current_installed_version." / ".$current_installed_buildtime;
+#$additional_info .= "Current version: ".$current_installed_version."\n";
+#$additional_info .= "Built on: ".$current_installed_buildtime;
+#$additional_info .= "Remote version: ".$remote_version."\n";
+
+echo $additional_info;
+
+#exit ($exitcode);
+
+?>
+

@@ -1,0 +1,50 @@
+#!/bin/sh
+
+if [ "$1" = "-name" ] && [ ! -z "$2" ]; then
+        NAME=$2
+	OPTION3=$3
+	OPTION4=$4
+	if [ "$NAME" = "pinger" ]; then
+		
+		if [ -f /usr/local/bin/dpinger ]; then 
+        		CHECK=$(/usr/local/sbin/pfSsh.php playback svc status dpinger $OPTION3 $OPTION4 |grep 'running' |wc -l | sed -e 's/^[ \t]*//')||exit 3
+			NAME="d"$NAME
+		else
+        		CHECK=$(/usr/local/sbin/pfSsh.php playback svc status apinger $OPTION3 $OPTION4 |grep 'running' |wc -l | sed -e 's/^[ \t]*//')||exit 3
+			NAME="a"$NAME
+		fi
+
+		#CHECK=`expr $CHECK1 + $CHECK2`
+
+	else 
+		CHECK=$(/usr/local/sbin/pfSsh.php playback svc status $NAME $OPTION3 $OPTION4 |grep 'running' |wc -l | sed -e 's/^[ \t]*//')||exit 3
+	fi
+        #CHECK=$(/usr/local/sbin/pfSsh.php playback svc status $NAME)||exit 3
+        #echo "DEBUG:   NAME:$NAME CHECK:$CHECK"
+        if [ $CHECK -lt 1 ];then
+                echo "CRITICAL - $NAME service not running"
+                exit 2
+        else
+                echo "OK - $NAME service is running"
+                exit 0
+        fi
+
+else
+        echo "check_pf_services.sh - Nagios Plugin for checking services on pfSense "
+        echo ""
+        echo "Usage:    check_pf_services.sh -name <service_name>"
+	echo " "
+	echo "Note:     If captiveportal is the service getting checked, the zone name"
+	echo "          in all lowercase must follow the service_name parameter" 
+	echo "Example:  check_pf_services.sh -name captiveportal guest"
+	echo " "
+	echo "Note:     If openvpn is the service getting checked, two options must be"
+	echo "          specified -- the option "server" followed by the server id." 
+	echo "Example:  check_pf_services.sh -name openvpn server 1"
+	echo " "
+	echo "Note:     Specifying 'pinger' as the service will check both apinger"
+	echo "          as well as dpinger. You can specify directly as well."
+	echo "Example:  check_pf_services.sh -name pinger"
+        exit 3
+fi
+

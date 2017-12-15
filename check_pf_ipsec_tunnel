@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+
+if [ "$1" = "-e" ] && [ ! -z "$2" ]; then
+
+exitstatus=2 #default
+
+endpoint=$2
+name_instead=$4
+
+result=$(/usr/local/sbin/ipsec statusall | grep 'ESTABLISHED' | grep $endpoint | cut -d":" -f2 | cut -d "," -f1 | sed -e 's/^[ \t]*//')||exit 3
+if [ "$name_instead" != "" ]
+  then
+    endpoint=$name_instead
+fi
+
+if [ "$result" != "" ]
+  then
+    echo "OK - IPSEC VPN tunnel to $endpoint - $result"
+    exitstatus=0
+else
+    echo "CRITICAL - IPSEC VPN tunnel not found: $endpoint"
+    exitstatus=2
+fi
+
+#echo "exit: $exitstatus"
+exit $exitstatus
+
+else
+        echo "check_pf_ipsec_tunnel.sh - Nagios Plugin for checking IPSEC tunnel status on pfSense "
+        echo ""
+        echo "Usage:    check_pf_ipsec_tunnel.sh -e <remote gateway> [-name instead of IP address]"
+        echo "Note:     must be the same IP or hostname used in IPSEC config"
+	echo "Example:  check_pf_ipsec_tunnel.sh -e 4.4.4.4 -name Google"
+        exit 3
+fi

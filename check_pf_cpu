@@ -1,0 +1,33 @@
+#!/bin/sh
+
+if [ "$1" = "-w" ] && [ "$2" -gt "0" ] && [ "$3" = "-c" ] && [ "$4" -gt "0" ] ; then
+        warn=$2
+        crit=$4
+        IDLE=$(top -b -d2 | grep 'CPU:' | cut -d',' -f5 | cut -d'%' -f1 | cut -d'.' -f1 | sed -e 's/^[ \t]*//')||exit 3
+        #UTIL=`echo "100-$IDLE"| bc`
+        UTIL=`expr 100 - $IDLE`
+        #UTIL_RND=`echo "100-$IDLE"| bc | awk '{printf("%d\n",$1 + 0.5)}'`
+        #echo "DEBUG:   IDLE:$IDLE"
+        #echo "DEBUG:   UTIL:$UTIL"
+        #echo "DEBUG:   UTIL_RND:$UTIL_RND"
+        if [ $UTIL -ge $warn ];then
+                if [ $UTIL -ge $crit ]; then
+                echo "CRITICAL - CPU Usage = $UTIL%|CPU=$UTIL;;;;"
+                exit 2
+        else
+                echo "WARNING - CPU Usage = $UTIL%|CPU=$UTIL;;;;"
+                exit 1
+        fi
+else
+                echo "OK - CPU Usage = $UTIL%|CPU=$UTIL;;;;"
+        exit 0
+fi
+
+else
+        echo "check_cpu.sh - Nagios Plugin for checking CPU idle percentage "
+        echo ""
+        echo "Usage:    check_pf_cpu.sh -w <warnlevel> -c <critlevel>"
+        exit 3
+fi
+
+

@@ -1,0 +1,37 @@
+#!/bin/sh
+
+if [ "$1" = "-i" ] && [ ! -z "$2" ]; then
+	INT=$2
+	NAME_INSTEAD=$4
+
+	IFCONFIG_ACTIVE=$( /sbin/ifconfig $INT | grep "status: active" | wc -l | sed -e 's/^[ \t]*//') ||exit 3
+	IFCONFIG_UP=$( /sbin/ifconfig $INT | grep "<UP," | wc -l | sed -e 's/^[ \t]*//') ||exit 3
+
+	if [ "$NAME_INSTEAD" != "" ]; then
+		INT="$NAME_INSTEAD($INT)"
+	fi
+
+	if [ $IFCONFIG_ACTIVE -eq "1" ] && [ $IFCONFIG_UP -eq "1" ] ; then
+		echo "OK - $INT up and active"
+		exit 0
+        elif [ $IFCONFIG_ACTIVE -eq "0" ] && [ $IFCONFIG_UP -eq "1" ] ; then
+                echo "CRITICAL - $INT up, but not active"
+                exit 2
+        elif [ $IFCONFIG_ACTIVE -eq "1" ] && [ $IFCONFIG_UP -eq "0" ] ; then
+                echo "CRITICAL - $INT down, but active"
+                exit 2
+        elif [ $IFCONFIG_ACTIVE -eq "0" ] && [ $IFCONFIG_UP -eq "0" ] ; then
+                echo "CRITICAL - $INT down and not active"
+                exit 2
+	else  
+		echo "UNKNOWN status on interface $INT"
+		exit 3
+        fi
+
+else
+        echo "check_pf_interface.sh - Nagios Plugin for checking an interface on pfSense "
+        echo ""
+        echo "Usage:	check_pf_interface.sh -i <interface_name> [-name alt name instead of one from ifconfig]"
+	echo "Example:  check_pf_interface.sh -i re0 -name LAN"
+        exit 3
+fi
