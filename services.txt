@@ -1,0 +1,300 @@
+###############################################################################
+#
+# Service configuration file
+#
+###############################################################################
+
+define service {
+	host_name			pfSense-home
+	service_description		CPU Usage
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_pf_cpu -w 80 -c 95"
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Disk - Root
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_disk / -w 20% -c 5%"
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Disk - VarRun
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_disk /var/run -w 20% -c 5%"
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Interface DEVICES
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_pf_interface -i em1_vlan500 -name DEVICES"
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Load
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_load -w 3,2.8,2.6 -c 10,7,5 -r "
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Memory Usage
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_pf_mem -w 90 -c 95"
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		NTP Variation
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_ntp_time -H time.google.com"!!!!!!!
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Ping
+	use				xiwizard_linuxserver_ping_service
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Ping to OpenDNS
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_ping -H 208.67.222.222 -w 80,10% -c 150,40%"
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Service: dhcpd
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_pf_services -name dhcpd"
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Service: pinger
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_pf_services -name pinger"
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Service: snort
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_pf_services -name snort"
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Service: unbound _DNS_
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_pf_services -name unbound"
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		State Table
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "sudo /usr/local/libexec/nagios/check_pf_state_table -w 60 -c 90"!!!!!!!
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Swap Usage
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_swap -w 90% -c 40%"
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		Total Processes
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "/usr/local/libexec/nagios/check_procs -w 200 -c 400"
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+define service {
+	host_name			pfSense-home
+	service_description		VPN to DallasTX
+	use				generic-service
+	check_command			check_xi_by_ssh!-C "sudo /usr/local/libexec/nagios/check_pf_ipsec_tunnel -e 4.4.4.4 -name DallasTX"!!!!!!!
+	max_check_attempts		5
+	check_interval			5
+	retry_interval			1
+	check_period			xi_timeperiod_24x7
+	notification_interval		60
+	notification_period		xi_timeperiod_24x7
+	notifications_enabled		0
+	contacts			nagiosadmin
+	_xiwizard			sshproxy
+	register			1
+	}	
+
+###############################################################################
+#
+# Service configuration file
+#
+# END OF FILE
+#
+###############################################################################
