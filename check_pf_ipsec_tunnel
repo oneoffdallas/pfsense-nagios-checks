@@ -8,7 +8,17 @@ exitstatus=2 #default
 endpoint=$2
 name_instead=$4
 
-result=$(/usr/local/sbin/ipsec statusall | grep 'ESTABLISHED' | grep $endpoint | cut -d":" -f2 | cut -d "," -f1 | sed -e 's/^[ \t]*//')||exit 3
+regex="\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b"
+
+IPTEST=$(echo $endpoint | egrep $regex)
+if [ "$?" -eq 0 ]
+then
+        result=$(/usr/local/sbin/ipsec statusall | grep 'ESTABLISHED' | grep $endpoint | cut -d":" -f2 | cut -d "," -f1 | sed -e 's/^[ \t]*//')||exit 3
+else
+        hostip=$(dig +short $endpoint)
+        result=$(/usr/local/sbin/ipsec statusall | grep 'ESTABLISHED' | grep $hostip | cut -d":" -f2 | cut -d "," -f1 | sed -e 's/^[ \t]*//')||exit 3
+fi
+
 if [ "$name_instead" != "" ]
   then
     endpoint=$name_instead
