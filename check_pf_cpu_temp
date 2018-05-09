@@ -7,7 +7,7 @@ if [ "$1" = "-w" ] && [ "$2" -gt "0" ] && [ "$3" = "-c" ] && [ "$4" -gt "0" ] ; 
         warn=$2
         crit=$4
 
-        CPUTEMP=$(/sbin/sysctl -a | grep "^dev.*0.temperature" | awk '{print $2}' | cut -d'C' -f1)||exit 3
+        CPUTEMP=$(/sbin/sysctl -a | grep "^dev.*0.temperature" | awk '{print $2}' | cut -d'.' -f1)||exit 3
 
         if [ -z $CPUTEMP ];then
                 echo "*** CPU temperature not returned. It might not be supported on this system. ***"
