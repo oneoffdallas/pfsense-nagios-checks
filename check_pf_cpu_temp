@@ -1,0 +1,38 @@
+#!/bin/sh
+#
+# Dallas Haselhorst 9May2018
+#
+
+if [ "$1" = "-w" ] && [ "$2" -gt "0" ] && [ "$3" = "-c" ] && [ "$4" -gt "0" ] ; then
+        warn=$2
+        crit=$4
+
+        CPUTEMP=$(/sbin/sysctl -a | grep "^dev.*0.temperature" | awk '{print $2}' | cut -d'C' -f1)||exit 3
+
+        if [ -z $CPUTEMP ];then
+                echo "*** CPU temperature not returned. It might not be supported on this system. ***"
+                echo "*** Try sysctl -a | grep temperature to see if the formatting is off. ***"
+                exit 0
+        fi
+
+
+        if [ $CPUTEMP -ge $warn ];then
+                if [ $CPUTEMP -ge $crit ]; then
+                echo "CRITICAL - CPU temperature - $CPUTEMP (C)|TEMP=$CPUTEMP;;;;"
+                exit 2
+                else
+                echo "WARNING - CPU temperature = $CPUTEMP (C)|TEMP=$CPUTEMP;;;;"
+                exit 1
+                fi
+        else
+                echo "OK - CPU temperature = $CPUTEMP (C)|TEMP=$CPUTEMP;;;;"
+                exit 0
+        fi
+
+else
+        echo "check_pf_cpu_temp - Nagios Plugin for checking CPU temp on pfSense"
+        echo "*** Only returns value of 1st CPU core if there are multiple ***  "
+        echo ""
+        echo "Usage:    check_pf_cpu_temp -w <warnlevel> -c <critlevel>"
+        exit 3
+fi
