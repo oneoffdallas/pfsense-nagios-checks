@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# Dallas Haselhorst 9May2018
+#
+# This is a modified version of what I found on Nagios Exchange.
+# I freely admit I did not write the lines other than the final
+# few of this script.
+#
+
+UPTIME_REPORT=`uptime | tr -d ","`
+
+if echo $UPTIME_REPORT | grep -i day > /dev/null ; then
+
+if echo $UPTIME_REPORT | grep -i "min" > /dev/null ; then
+
+DAYS=`echo $UPTIME_REPORT | awk '{ print $3 }'`
+MINUTES=`echo $UPTIME_REPORT | awk '{ print $5}'`
+
+else
+DAYS=`echo $UPTIME_REPORT | awk '{ print $3 }'`
+HOURS=`echo $UPTIME_REPORT | awk '{ print $5}' | cut -f1 -d":"`
+MINUTES=`echo $UPTIME_REPORT | awk '{ print $5}' | cut -f2 -d":"`
+fi
+
+elif #in AIX 5:00 will show up as 5 hours, and in Solaris 2.6 as 5 hr(s)
+echo $UPTIME_REPORT | egrep -e "hour|hr\(s\)" > /dev/null ; then
+HOURS=`echo $UPTIME_REPORT | awk '{ print $3}'`
+else
+echo $UPTIME_REPORT | awk '{ print $3}' | grep ":" > /dev/null && \
+HOURS=`echo $UPTIME_REPORT | awk '{ print $3}' | cut -f1 -d":"`
+MINUTES=`echo $UPTIME_REPORT | awk '{ print $3}' | cut -f2 -d":"`
+fi
+
+UPTIME_MSG="${DAYS:+$DAYS Days,} ${HOURS:+$HOURS Hours,} $MINUTES Minutes"
+
+if [ -z $DAYS ];then
+        echo WARNING - $UPTIME_MSG
+        exit 1
+else
+        echo OK - $UPTIME_MSG
+        exit 0
+fi
