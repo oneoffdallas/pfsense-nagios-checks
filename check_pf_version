@@ -1,6 +1,13 @@
 #!/usr/local/bin/php -f
 <?
 
+# This check pulls the version from the website and compares it
+# to the installed version. 
+# Many thanks to Atadilo for fixing the code and simplifying it.
+
+# Created 15 Dec 2017
+# Modified 17 Oct 2019
+
 require_once("pkg-utils.inc");
 $system_pkg_version  = get_system_pkg_version();
 
@@ -17,3 +24,5 @@ $additional_info .= "Remote version: ".$system_pkg_version['version']."\n";
 
 echo $additional_info;
 exit ($exitcode);
+
+?>
