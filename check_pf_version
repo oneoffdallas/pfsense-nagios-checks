@@ -6,7 +6,7 @@
 # Many thanks to Atadilo for fixing the code and simplifying it.
 
 # Created 15 Dec 2017
-# Modified 17 Oct 2019
+# Modified 12 May 2020
 
 require_once("pkg-utils.inc");
 global $g;
