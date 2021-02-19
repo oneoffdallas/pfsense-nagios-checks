@@ -3,7 +3,7 @@
 if [ "$1" = "-w" ] && [ "$2" -gt "0" ] && [ "$3" = "-c" ] && [ "$4" -gt "0" ] ; then
         warn=$2
         crit=$4
-        IDLE=$(top -b -d2 | grep 'CPU:' | cut -d',' -f5 | cut -d'%' -f1 | cut -d'.' -f1 | sed -e 's/^[ \t]*//')||exit 3
+        IDLE=$(top -b -d2 | grep 'CPU:' | cut -d',' -f5 | cut -d'%' -f1 | cut -d'.' -f1 | sed -e 's/^[ \t]*//' | tail -1)||exit 3
         #UTIL=`echo "100-$IDLE"| bc`
         UTIL=`expr 100 - $IDLE`
         #UTIL_RND=`echo "100-$IDLE"| bc | awk '{printf("%d\n",$1 + 0.5)}'`
