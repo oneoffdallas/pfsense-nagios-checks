@@ -1,0 +1,114 @@
+#!/bin/sh
+#
+# Manuel Gayer 2022-02-22
+
+GWSTATUSCMD="/usr/local/sbin/pfSsh.php playback gatewaystatus"
+
+rmin='0.000'
+plmin=0
+plmax=100
+
+exitstatus=3
+
+usage() {
+    echo "check_pf_gw_status - Nagios Plugin for checking Gateway Status"
+    echo ""
+    echo "check_pf_gw_status [-h] ( -l | -G <gwname> -w <wrtt,wpl>% -c <crtt,cpl>% )"
+    echo ""
+    exit 3
+}
+
+listgw() {
+    $GWSTATUSCMD | tail -n +2 | awk '{print $1}'
+}
+
+parse_args() {
+    while test $# -gt 0; do
+        case $1 in
+        -h)
+            usage
+            shift
+            ;;
+        -l)
+            echo 'List of gateways on this pfsense:'
+            listgw
+            exit 3
+            shift
+            ;;
+        -G)
+            gwname=$2
+            shift
+            ;;
+        -w)
+            wrtt=$(echo $2 | cut -d',' -f1)
+            wpl=$(echo $2 | cut -d',' -f2 | tr -d '%')
+            shift
+            ;;
+        -c)
+            crtt=$(echo $2 | cut -d',' -f1)
+            cpl=$(echo $2 | cut -d',' -f2 | tr -d '%')
+            shift
+            ;;
+        *)
+            echo "ERROR: unknown parameter \"$1\""
+            usage
+            shift
+            ;;
+        esac
+        shift
+    done
+}
+
+parse_args "$@"
+
+if [ -z "$gwname" ] || [ -z "$wrtt" ] || [ -z "$wpl" ] || [ -z "$crtt" ] || [ -z "$cpl" ]; then
+    usage
+fi
+
+wrtt=$(printf "%0.3f" "$wrtt")
+crtt=$(printf "%0.3f" "$crtt")
+
+STAT=$($GWSTATUSCMD | grep $gwname | sed -E -e 's/[[:blank:]]+/,/g' -e 's/ms//g' -e 's/%//g')
+if [ -z "$STAT" ]; then
+    echo -n "Gateway with name '${gwname}' does not exist, possible values are: "
+    listgw | xargs
+    exit 3
+fi
+
+GWNAME=$(echo $STAT | cut -d',' -f1)
+GWMONITOR=$(echo $STAT | cut -d',' -f2)
+GWSOURCE=$(echo $STAT | cut -d',' -f3)
+GWRTT=$(printf "%0.3f" $(echo $STAT | cut -d',' -f4))
+GWRTTSD=$(printf "%0.3f" $(echo $STAT | cut -d',' -f5))
+GWLOSS=$(echo $STAT | cut -d',' -f6)
+GWSTATUS=$(echo $STAT | cut -d',' -f7)
+GWSUBSTATUS=$(echo $STAT | cut -d',' -f8 | sed 's/none//')
+
+if [ -n "$GWSUBSTATUS" ]; then
+    GWSUBSTATUS=' ('$GWSUBSTATUS')'
+fi
+
+if [ "$GWSTATUS" = 'online' ]; then
+    exitstatus=0
+fi
+
+if [ 1 -eq "$(echo "${GWRTT} >= ${wrtt}" | bc)" ] && [ 1 -eq "$(echo "${GWRTT} < ${crtt}" | bc)" ] ||
+    [ 1 -eq "$(echo "${GWLOSS} >= ${wpl}" | bc)" ] && [ 1 -eq "$(echo "${GWLOSS} < ${cpl}" | bc)" ]; then
+    exitstatus=1
+fi
+
+if [ "$GWSTATUS" = 'down' ] ||
+    [ 1 -eq "$(echo "${GWRTT} >= ${crtt}" | bc)" ] ||
+    [ 1 -eq "$(echo "${GWLOSS} >= ${cpl}" | bc)" ]; then
+    exitstatus=2
+fi
+
+case $exitstatus in
+0) exitmessage='OK' ;;
+1) exitmessage='WARNING' ;;
+2) exitmessage='CRITICAL' ;;
+3) exitmessage='UNKNOWN' ;;
+esac
+
+echo "GATEWAY ${GWNAME} ${exitmessage} - Status = ${GWSTATUS}${GWSUBSTATUS}, Packet loss = ${GWLOSS}%, RTT = ${GWRTT}ms, Monitor=${GWMONITOR}|rtt=${GWRTT}ms;${wrtt};${crtt};${rmin} pl=${GWLOSS}%;${wpl};${cpl};${plmin};${plmax}"
+exit $exitstatus
