@@ -1,0 +1,126 @@
+#!/bin/sh
+#
+# Joe Vivona 2022-08-02
+
+#  you must have mmc-utils pacakage installed first
+
+EMMCCMD="/usr/local/sbin/mmc"
+EMMCSTATUSCMD="$EMMCCMD extcsd read /dev/mmcsd0rpmb"
+
+
+exitstatus=3
+
+usage() {
+    echo "check_pf_emmc_status - Nagios Plugin for checking eMMC Life Time Estimates and Pre EOL Infomration"
+        echo ""
+    echo "see https://docs.netgate.com/pfsense/en/latest/troubleshooting/disk-lifetime.html  for more information"
+        echo ""
+    echo "check_pf_emmc_status [-h] -C [LTEA | LTEB | EOL] -c <crit> -w <warn>"
+    echo ""
+    exit 3
+}
+
+
+ltea() {
+    $EMMCSTATUSCMD |  grep EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_A | awk -F: '{print $2}' | awk -Fx '{print $2}'
+}
+
+lteb() {
+    $EMMCSTATUSCMD |  grep EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_B | awk -F: '{print $2}' | awk -Fx '{print $2}'
+}
+
+eol() {
+    $EMMCSTATUSCMD |  grep EXT_CSD_PRE_EOL_INFO | awk -F: '{print $2}' | awk -Fx '{print $2}'
+}
+
+
+parse_args() {
+    while test $# -gt 0; do
+        case $1 in
+        -h)
+            usage
+            shift
+            ;;
+
+        -C)
+            checkname=$2
+            shift
+            ;;
+        -w)
+            warn=$2
+            shift
+            ;;
+        -c)
+            crit=$2
+            shift
+            ;;
+        *)
+            echo "ERROR: unknown parameter \"$1\""
+            usage
+            shift
+            ;;
+        esac
+        shift
+    done
+}
+
+# make sure MMC utils are installed
+if [ ! -e $EMMCCMD ]; then
+        echo "MMC Utilities are not installed"
+        echo " run the following on the pfSense device via SSH: pkg install -y mmc-utils"
+        exit 3
+fi
+
+parse_args "$@"
+
+if [ -z "$checkname" ] || [ -z "$warn" ] || [ -z "$crit" ]; then
+    usage
+fi
+
+#  we've passed all the initial checks and parameters
+#  now go execute the correct check and return the results based upon WARN and CRIT levels
+
+case $checkname in
+        "LTEA") RESULT=$(ltea) ;;
+        "LTEB") RESULT=$(lteb) ;;
+        "EOL")  RESULT=$(eol) ;;
+        *)    usage ;;
+esac
+
+if [ -z "$RESULT" ]; then
+    echo -n "Something has gone wrong with the eMMC check - review syntax "
+    exit 3
+fi
+
+RESULTDEC=`echo "ibase=16; $RESULT" | bc`
+
+# invert the checks to make life easier
+
+if [ $RESULTDEC -lt $warn ]; then
+        MESSAGE='eMMC lifespan is OK, current value: '$RESULT' '
+        exitstatus=0
+fi
+
+if [ $RESULTDEC -ge $warn ]; then
+    # this is WARNING status
+    MESSAGE='eMMC is in Warning State, value: '$RESULT' '
+        exitstatus=1
+fi
+
+if [ $RESULTDEC -ge $crit ]; then
+    # this is CRITICAL status
+    MESSAGE='eMMC is in Critical State, value: '$RESULT' '
+        exitstatus=2
+fi
+
+
+case $exitstatus in
+0) exitmessage='OK' ;;
+1) exitmessage='WARNING' ;;
+2) exitmessage='CRITICAL' ;;
+3) exitmessage='UNKNOWN' ;;
+esac
+
+echo "${exitmessage} - ${MESSAGE}"
+exit $exitstatus
+
