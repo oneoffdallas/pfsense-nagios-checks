@@ -68,7 +68,7 @@ fi
 wrtt=$(printf "%0.3f" "$wrtt")
 crtt=$(printf "%0.3f" "$crtt")
 
-STAT=$($GWSTATUSCMD | grep $gwname | sed -E -e 's/[[:blank:]]+/,/g' -e 's/ms//g' -e 's/%//g')
+STAT=$($GWSTATUSCMD | grep "^${gwname}\s" | sed -E -e 's/[[:blank:]]+/,/g' -e 's/ms//g' -e 's/%//g')
 if [ -z "$STAT" ]; then
     echo -n "Gateway with name '${gwname}' does not exist, possible values are: "
     listgw | xargs
