@@ -1,46 +1,109 @@
 #!/bin/sh
 #
+# Check IPsec Tunnel Status and Uptime on pfSense using swanctl
+# usage: ./check_pf_ipsec_swanctl.sh -c <con-name> [child-suffix]
+#
 
-if [ "$1" = "-e" ] && [ ! -z "$2" ]; then
+# Helper function to convert seconds to human readable time
+format_time() {
+    local seconds=$1
+    
+    # Check if input is a valid number
+    if ! [ "$seconds" -eq "$seconds" ] 2>/dev/null; then
+        echo "unknown time"
+        return
+    fi
 
-exitstatus=2 #default
+    if [ "$seconds" -lt 60 ]; then
+        echo "${seconds} seconds"
+    elif [ "$seconds" -lt 3600 ]; then
+        # Calculate minutes
+        local minutes=$((seconds / 60))
+        echo "${minutes} minutes"
+    else
+        # Calculate hours
+        local hours=$((seconds / 3600))
+        echo "${hours} hours"
+    fi
+}
 
-endpoint=$2
-name_instead=$4
-
-regex="\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b"
-
-IPTEST=$(echo $endpoint | egrep $regex)
-if [ "$?" -eq 0 ]
-then
-        result=$(/usr/local/sbin/ipsec statusall | grep 'ESTABLISHED' | grep $endpoint | cut -d":" -f2 | cut -d "," -f1 | sed -e 's/^[ \t]*//')||exit 3
-else
-        hostip=$(dig +short $endpoint)
-        result=$(/usr/local/sbin/ipsec statusall | grep 'ESTABLISHED' | grep $hostip | cut -d":" -f2 | cut -d "," -f1 | sed -e 's/^[ \t]*//')||exit 3
-fi
-
-if [ "$name_instead" != "" ]
-  then
-    endpoint=$name_instead
-fi
-
-if [ "$result" != "" ]
-  then
-    echo "OK - IPSEC VPN tunnel to $endpoint - $result"
-    exitstatus=0
-else
-    echo "CRITICAL - IPSEC VPN tunnel not found: $endpoint"
+if [ "$1" = "-c" ]; then
+    # Default exit status (Critical)
     exitstatus=2
-fi
 
-#echo "exit: $exitstatus"
-exit $exitstatus
+    ike_name="$2"
+    child_suffix="$3"
+
+    # Define the swanctl binary path
+    SWANCTL="/usr/local/sbin/swanctl"
+
+    # 1. Query swanctl for the specific IKE SA
+    # We capture both stdout and stderr to handle cases where the daemon is down
+    output=$($SWANCTL --list-sas --ike "$ike_name" 2>&1)
+    
+    # Check if command failed entirely
+    if [ $? -ne 0 ]; then
+        echo "UNKNOWN: Failed to execute swanctl. Check permissions or service status."
+        exit 3
+    fi
+
+    # 2. Check Phase 1 (IKE SA) Status
+    if echo "$output" | grep -q "$ike_name:.*ESTABLISHED"; then
+        p1_status="ESTABLISHED"
+        
+        # Extract raw seconds for P1.
+        # Logic: Find the IKE line, look at the next few lines for "established", grab the number before 's'
+        # Example line: "established 1450s ago, rekeying in..."
+        raw_p1_time=$(echo "$output" | grep -A 10 "$ike_name:.*ESTABLISHED" | grep -m 1 "established" | awk '{print $2}' | tr -d 's')
+        
+        p1_readable=$(format_time "$raw_p1_time")
+    else
+        p1_status="DOWN"
+        p1_readable="N/A"
+    fi
+
+    # 3. Check Phase 2 (Child SA) Status
+    if [ -n "$child_suffix" ]; then
+        child_name="${ike_name}_${child_suffix}"
+    else
+        child_name="$ike_name"
+    fi
+
+    # We look for the child name followed eventually by "INSTALLED"
+    if echo "$output" | grep -q "$child_name:.*INSTALLED"; then
+        p2_status="INSTALLED"
+        
+        # Extract raw seconds for P2.
+        # Logic: Find the child line, look for "installed", grab number before 's'
+        # Note: We must ensure we grep the Child SA block, not the parent IKE block again.
+        # We grep for the child name, then look for the first "installed" line appearing after it.
+        raw_p2_time=$(echo "$output" | grep -A 10 "$child_name:.*INSTALLED" | grep -m 1 "installed" | awk '{print $2}' | tr -d 's')
+        
+        p2_readable=$(format_time "$raw_p2_time")
+    else
+        p2_status="DOWN"
+        p2_readable="N/A"
+    fi
+
+    # 4. Determine Final Nagios State
+    if [ "$p1_status" = "DOWN" ]; then
+        echo "CRITICAL: IPSEC IKE_SA '$ike_name' is NOT ESTABLISHED"
+        exitstatus=2
+    elif [ "$p2_status" = "DOWN" ]; then
+        echo "CRITICAL: IPSEC IKE_SA '$ike_name' UP ($p1_readable ago), but Child SA '$child_name' is DOWN"
+        exitstatus=2
+    else
+        echo "OK: IPSEC '$ike_name' UP ($p1_readable ago), Child '$child_name' UP ($p2_readable ago)"
+        exitstatus=0
+    fi
+
+    exit $exitstatus
 
 else
-        echo "check_pf_ipsec_tunnel.sh - Nagios Plugin for checking IPSEC tunnel status on pfSense "
-        echo ""
-        echo "Usage:    check_pf_ipsec_tunnel.sh -e <remote gateway> [-name instead of IP address]"
-        echo "Note:     must be the same IP or hostname used in IPSEC config"
-	echo "Example:  check_pf_ipsec_tunnel.sh -e 4.4.4.4 -name Google"
-        exit 3
+    echo "check_pf_ipsec_tunnel - Nagios Plugin for checking IPSEC status + uptime"
+    echo ""
+    echo "Usage:    ./check_pf_ipsec_tunnel -c <Connection Name> <Child Suffix>"
+    echo "Example:  ./check_pf_ipsec_tunnel -c con1"
+	echo "Example:  ./check_pf_ipsec_tunnel -c con1 2"
+    exit 3
 fi
